@@ -1,0 +1,7 @@
+# Custom
+*.pyc
+*mypy_cache*
+*DS_Store*
+*.json
+*old*
+*checkpoint*
