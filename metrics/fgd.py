@@ -16,19 +16,19 @@ from timeit import default_timer as timer
 from tqdm import tqdm # type: ignore
 from scipy.stats import ks_2samp # type: ignore
 from scipy.optimize import curve_fit # type: ignore
-from .utils import reset_random_seeds
-from .utils import conditional_print
-from .utils import conditional_tf_print
-from .utils import generate_and_clean_data
-from .utils import NumpyDistribution
-from .base import TwoSampleTestInputs
-from .base import TwoSampleTestBase
-from .base import TwoSampleTestResult
-from .base import TwoSampleTestResults
+from GMetrics.utils import reset_random_seeds
+from GMetrics.utils import conditional_print
+from GMetrics.utils import conditional_tf_print
+from GMetrics.utils import generate_and_clean_data
+from GMetrics.utils import NumpyDistribution
+from GMetrics.base import TwoSampleTestInputs
+from GMetrics.base import TwoSampleTestBase
+from GMetrics.base import TwoSampleTestResult
+from GMetrics.base import TwoSampleTestResults
 from jetnet.evaluation import gen_metrics as JMetrics # type: ignore
 
 from typing import Tuple, Union, Optional, Type, Dict, Any, List, Set
-from .utils import DTypeType, IntTensor, FloatTensor, BoolTypeTF, BoolTypeNP, IntType, DataTypeTF, DataTypeNP, DataType, DistTypeTF, DistTypeNP, DistType, DataDistTypeNP, DataDistTypeTF, DataDistType, BoolType
+from GMetrics.utils import DTypeType, IntTensor, FloatTensor, BoolTypeTF, BoolTypeNP, IntType, DataTypeTF, DataTypeNP, DataType, DistTypeTF, DistTypeNP, DistType, DataDistTypeNP, DataDistTypeTF, DataDistType, BoolType
 
 def _linear(x, intercept, slope):
     return intercept + slope * x

@@ -15,10 +15,10 @@ import tensorflow_probability as tfp
 from timeit import default_timer as timer
 
 sys.path.insert(0,'../utils_func/')
-import MixtureDistributions # type: ignore
 sys.path.insert(0,'../')
 import GMetrics # type: ignore
 from GMetrics.utils import save_update_metrics_config, save_update_LR_metrics_config # type: ignore
+from . import MixtureDistributions # type: ignore
 
 from typing import Tuple, Union, Optional, Type, Callable, Dict, List, Any
 from numpy import typing as npt
