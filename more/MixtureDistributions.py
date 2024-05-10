@@ -60,7 +60,7 @@ def MultiNormalFromMix(ncomp: int = 3,
                          scale_factor = scale_factor,
                          dtype = dtype,
                          seed = seed)
-    covariance_matrix = mix.covarianc()
+    covariance_matrix = mix.covariance()
     scale: tf.Tensor = tf.linalg.cholesky(covariance_matrix) # type: ignore
     mvn = tfp.distributions.MultivariateNormalTriL(loc = loc, scale_tril = scale)
     return mvn
