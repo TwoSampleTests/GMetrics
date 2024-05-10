@@ -35,13 +35,11 @@ def MixMultiNormal(ncomp: int = 3,
                                           maxval = 1, 
                                           dtype = dtype)
     probs = probs / tf.reduce_sum(probs)
-    components: List[tfp.distributions.MultivariateNormalDiag] = []
-    for i in range(ncomp):
-        components.append(tfp.distributions.MultivariateNormalDiag(loc = loc[i], scale_diag = scale[i]))
-    mix_gauss: tfp.distributions.Mixture = tfp.distributions.Mixture(
-        cat = tfp.distributions.Categorical(probs = probs),
-        components = components,
-        validate_args = True)
+    components = tfp.distributions.MultivariateNormalDiag(loc=loc, scale_diag=scale)
+    mix_gauss = tfp.distributions.MixtureSameFamily(
+        mixture_distribution=tfp.distributions.Categorical(probs=probs),
+        components_distribution=components,
+        validate_args=True)
     return mix_gauss
 
 def MultiNormalFromMix(ncomp: int = 3,
@@ -49,8 +47,7 @@ def MultiNormalFromMix(ncomp: int = 3,
                        loc_factor = 1.,
                        scale_factor = 1.,
                        dtype = tf.float64,
-                       seed: int = 0,
-                       nsamples: int = 100_000
+                       seed: int = 0
                       ) -> tfp.distributions.MultivariateNormalTriL: 
     GMetrics.utils.reset_random_seeds(seed)
     loc: tf.Tensor = tf.random.uniform([ndims], 
@@ -63,8 +60,7 @@ def MultiNormalFromMix(ncomp: int = 3,
                          scale_factor = scale_factor,
                          dtype = dtype,
                          seed = seed)
-    samp = tf.cast(mix.sample(nsamples), dtype = dtype)
-    covariance_matrix = tfp.stats.covariance(samp, sample_axis = 0)
+    covariance_matrix = mix.covarianc()
     scale: tf.Tensor = tf.linalg.cholesky(covariance_matrix) # type: ignore
     mvn = tfp.distributions.MultivariateNormalTriL(loc = loc, scale_tril = scale)
     return mvn
@@ -124,8 +120,6 @@ def modify_covariance_matrix(original_covariance, eps):
     diagonal_mask = tf.linalg.diag(tf.ones(shape, dtype=dtype))
     modified_off_diag = modified_off_diag * (1 - diagonal_mask)
     modified_covariance = modified_diag + modified_off_diag
-    #print("Original Covariance:\n", original_covariance)
-    #print("Modified Covariance:\n", modified_covariance)
     return modified_covariance
 
 def deform_cov_off_diag(distribution,
@@ -139,8 +133,11 @@ def deform_cov_off_diag(distribution,
     else:
         GMetrics.utils.reset_random_seeds(seed)
         dtype = distribution.mean().dtype
-        samp = tf.cast(distribution.sample(nsamples), dtype = dtype)
-        original_covariance = tfp.stats.covariance(samp, sample_axis = 0)
+        try:
+            original_covariance = distribution.covariance()
+        except:
+            samp = tf.cast(distribution.sample(nsamples), dtype = dtype)
+            original_covariance = tfp.stats.covariance(samp, sample_axis = 0)
         modified_covariance = modified_covariance = modify_covariance_matrix(original_covariance, eps)
         chol_original = tf.linalg.cholesky(original_covariance)
         chol_modified = tf.linalg.cholesky(modified_covariance)
@@ -255,459 +252,6 @@ def deformed_distribution(distribution,
     func: Callable = eval("deform_"+deform_type)
     deformed_dist = func(distribution, eps = eps, **deform_kwargs)
     return deformed_dist
-
-def MultiNormalFromMixtureGaussian(ncomp: int,
-                                   ndims: int,
-                                   eps_loc: float = 0.,
-                                   eps_scale: float = 0.,
-                                   seed: int = 0,
-                                   scale_def: Optional[str] = None, # could be None, std, cov, off
-                                   nsamples: int = 50_000
-                                  ) -> tfp.distributions.MultivariateNormalTriL: 
-    reset_random_seeds(seed)
-    loc: np.ndarray = np.random.sample(ndims) * 10
-    loc_eps_np: np.ndarray = np.random.uniform(loc - eps_loc, loc + eps_loc)
-    loc_eps: tf.Tensor = tf.constant(loc_eps_np, dtype = tf.float64)
-    mix = MixtureGaussian(ncomp = ncomp,
-                          ndims = ndims,
-                          eps_loc = eps_loc,
-                          eps_scale = eps_scale,
-                          seed = seed)
-    samp = mix.sample(nsamples).numpy()
-    df = pd.DataFrame(samp)
-    correlation_matrix_np: np.ndarray = df.corr().to_numpy()
-    if scale_def is not None:
-        for i in range(ndims):
-            for j in range(ndims):
-                if i == j:
-                    if scale_def == "std":
-                        correlation_matrix_np[i,j] = correlation_matrix_np[i,j] * (1 + eps_scale)
-                    elif scale_def == "cov":
-                        correlation_matrix_np[i,j] = correlation_matrix_np[i,j] * (1 + eps_scale)
-                    elif scale_def == "off":
-                        correlation_matrix_np[i,j] = correlation_matrix_np[i,j] * np.max([1., eps_scale])
-                    else:
-                        raise Exception("scale_def should be 'None', 'std', 'cov', or 'off'.")
-                else:
-                    if scale_def == "std":
-                        correlation_matrix_np[i,j] = correlation_matrix_np[i,j]
-                    elif scale_def == "cov":
-                        correlation_matrix_np[i,j] = correlation_matrix_np[i,j] * (1 + eps_scale)
-                    elif scale_def == "off":
-                        correlation_matrix_np[i,j] = correlation_matrix_np[i,j] * np.max([0.,(1 - eps_scale)])
-                    else:
-                        raise Exception("scale_def should be 'None', 'std', 'cov', or 'off'.")
-    #print(f"correlation matrix: {correlation_matrix_np}")
-    if not np.all(np.linalg.eigvals(correlation_matrix_np) >= 0):
-        raise ValueError("The correlation matrix is not semi positive-definite.")
-    covariance_matrix: tf.Tensor = tf.constant(correlation_matrix_np, dtype = tf.float64)
-    scale_eps: tf.Tensor = tf.linalg.cholesky(covariance_matrix) # type: ignore
-    mvn = tfp.distributions.MultivariateNormalTriL(loc = loc_eps, 
-                                                   scale_tril = scale_eps)
-    return mvn
-
-def MixtureGaussian(ncomp: int,
-                    ndims: int,
-                    eps_loc: float = 0.,
-                    eps_scale: float = 0.,
-                    seed: int = 0) -> tfp.distributions.Mixture:
-    """
-    Correlated mixture of Gaussians used in https://arxiv.org/abs/2302.12024 
-    with ncomp = 3 and ndims varying from 4 to 1_000
-    
-    Args:
-        ncomp: int, number of components
-        ndims: int, number of dimensions
-        seed: int, random seed
-
-    Returns:
-        targ_dist: tfp.distributions.Mixture, mixture of Gaussians
-    """
-    targ_dist: tfp.distributions.Mixture = MixMultiNormal1(ncomp, ndims, eps_loc, eps_scale, seed = seed)
-    return targ_dist
-
-def MixNormal1(n_components: int = 3,
-               n_dimensions: int = 4,
-               eps_loc: float = 0.,
-               eps_scale: float = 0.,
-               seed: int = 0) -> tfp.distributions.Mixture:
-    """
-    Defines a mixture of 'n_components' Normal distributions in 'n_dimensions' dimensions 
-    with means and stddevs given by the tensors 'loc' and 'scale' with shapes 
-    '(n_components,n_dimensions)'.
-    The components are mixed according to the categorical distribution with probabilities
-    'probs' (with shape equal to that of 'loc' and 'scale'). This means that each component in each
-    dimension can be assigned a different probability.
-
-    The resulting multivariate distribution has small correlation.
-
-    Note: The functions 'MixNormal1' and 'MixNormal1_indep'
-    generate identical samples, different from the samples generated by
-    'MixNormal2' and 'MixNormal2_indep' (also identical).
-    
-    Args:
-        n_components: int, number of components
-        n_dimensions: int, number of dimensions
-        seed: int, random seed
-        
-    Returns:
-        mix_gauss: tfp.distributions.Mixture, mixture of Gaussians
-    """
-    reset_random_seeds(seed)
-    loc: np.ndarray = np.random.sample([n_components, n_dimensions])*10
-    loc_eps: np.ndarray = np.random.uniform(loc-eps_loc, loc+eps_loc)
-    scale: np.ndarray = np.random.sample([n_components,n_dimensions])
-    scale_eps: np.ndarray = np.random.uniform(scale-eps_scale, scale+eps_scale)
-    probs: np.ndarray = np.random.sample([n_dimensions,n_components])
-    components: List[tfp.distributions.Normal] = []
-    for i in range(n_components):
-        components.append(tfp.distributions.Normal(loc = loc_eps[i],
-                                                   scale = scale_eps[i]))
-    mix_gauss: tfp.distributions.Mixture = tfp.distributions.Mixture(
-        cat = tfp.distributions.Categorical(probs=probs),
-        components = components,
-        validate_args = True)
-    return mix_gauss
-    
-def MixNormal2(n_components: int = 3,
-               n_dimensions: int = 4,
-               eps_loc: float = 0.,
-               eps_scale: float = 0.,
-               seed: int = 0) -> tfp.distributions.Mixture:
-    """
-    Defines a mixture of 'n_components' Normal distributions in 'n_dimensions' dimensions 
-    with means and stddevs given by the tensors 'loc' and 'scale' with shapes 
-    '(n_components,n_dimensions)'.
-    The components are mixed according to the categorical distribution with probabilities
-    'probs' (with shape equal to 'n_components'). This means that each component in all
-    dimension is assigned a single probability.
-
-    The resulting multivariate distribution has small correlation.
-
-    Note: The functions 'MixNormal1' and 'MixNormal1_indep'
-    generate identical samples, different from the samples generated by
-    'MixNormal2' and 'MixNormal2_indep' (also identical).
-    
-    Args:
-        n_components: int, number of components
-        n_dimensions: int, number of dimensions
-        seed: int, random seed
-
-    Returns:    
-        mix_gauss: tfp.distributions.MixtureSameFamily, mixture of Gaussians
-    """
-    reset_random_seeds(seed)
-    loc: np.ndarray = np.random.sample([n_components, n_dimensions])*10
-    loc_eps: np.ndarray = np.random.uniform(loc-eps_loc, loc+eps_loc)
-    scale: np.ndarray = np.random.sample([n_components,n_dimensions])
-    scale_eps: np.ndarray = np.random.uniform(scale-eps_scale, scale+eps_scale)
-    probs: np.ndarray = np.random.sample(n_components)
-    mix_gauss: tfp.distributions.MixtureSameFamily = tfp.distributions.MixtureSameFamily(
-        mixture_distribution = tfp.distributions.Categorical(probs = probs),
-        components_distribution = tfp.distributions.Normal(loc = loc_eps,
-                                                           scale = scale_eps),
-        validate_args = True)
-    return mix_gauss
-
-def MixNormal1_indep(n_components: int = 3,
-                     n_dimensions: int = 4,
-                     eps_loc: float = 0.,
-                     eps_scale: float = 0.,
-                     seed: int = 0) -> tfp.distributions.Independent:
-    """
-    Defines a mixture of 'n_components' Normal distributions in 'n_dimensions' dimensions 
-    with means and stddevs given by the tensors 'loc' and 'scale' with shapes 
-    '(n_components,n_dimensions)'.
-    The components are mixed according to the categorical distribution with probabilities
-    'probs' (with shape equal to that of 'loc' and 'scale'). This means that each component in each
-    dimension can be assigned a different probability.
-
-    The resulting multivariate distribution has small correlation.
-
-    Note: The functions 'MixNormal1' and 'MixNormal1_indep'
-    generate identical samples, different from the samples generated by
-    'MixNormal2' and 'MixNormal2_indep' (also identical).
-    
-    Args:
-        n_components: int, number of components
-        n_dimensions: int, number of dimensions
-        seed: int, random seed
-
-    Returns:
-        mix_gauss: tfp.distributions.Independent, mixture of Gaussians
-    """
-    reset_random_seeds(seed)
-    loc: np.ndarray = np.random.sample([n_components, n_dimensions])*10
-    loc_eps: np.ndarray = np.random.uniform(loc-eps_loc, loc+eps_loc)
-    scale: np.ndarray = np.random.sample([n_components,n_dimensions])
-    scale_eps: np.ndarray = np.random.uniform(scale-eps_scale, scale+eps_scale)
-    probs: np.ndarray = np.random.sample([n_dimensions,n_components])
-    components: List[tfp.distributions.Normal] = []
-    for i in range(n_components):
-        components.append(tfp.distributions.Normal(loc = loc_eps[i],
-                                                   scale = scale_eps[i]))
-    mix_gauss: tfp.distributions.Independent = tfp.distributions.Independent(
-        distribution = tfp.distributions.Mixture(cat = tfp.distributions.Categorical(probs = probs),
-                                   components = components,
-                                   validate_args = True),
-        reinterpreted_batch_ndims = 0)
-    return mix_gauss
-    
-def MixNormal2_indep(n_components: int = 3,
-                     n_dimensions: int = 4,
-                     eps_loc: float = 0.,
-                     eps_scale: float = 0.,
-                     seed: int = 0) -> tfp.distributions.Independent:
-    """
-    Defines a mixture of 'n_components' Normal distributions in 'n_dimensions' dimensions 
-    with means and stddevs given by the tensors 'loc' and 'scale' with shapes 
-    '(n_components,n_dimensions)'.
-    The components are mixed according to the categorical distribution with probabilities
-    'probs' (with shape equal to 'n_components'). This means that each component in all
-    dimension is assigned a single probability.
-
-    The resulting multivariate distribution has small correlation.
-
-    Note: The functions 'MixNormal1' and 'MixNormal1_indep'
-    generate identical samples, different from the samples generated by
-    'MixNormal2' and 'MixNormal2_indep' (also identical).
-    
-    Args:
-        n_components: int, number of components
-        n_dimensions: int, number of dimensions
-        seed: int, random seed
-        
-    Returns:
-        mix_gauss: tfp.distributions.Independent, mixture of Gaussians
-    """
-    reset_random_seeds(seed)
-    loc: np.ndarray = np.random.sample([n_components, n_dimensions])*10
-    loc_eps: np.ndarray = np.random.uniform(loc-eps_loc, loc+eps_loc)
-    scale: np.ndarray = np.random.sample([n_components,n_dimensions])
-    scale_eps: np.ndarray = np.random.uniform(scale-eps_scale, scale+eps_scale)
-    probs: np.ndarray = np.random.sample(n_components)
-    mix_gauss: tfp.distributions.Independent = tfp.distributions.Independent(
-        distribution = tfp.distributions.MixtureSameFamily(
-            mixture_distribution = tfp.distributions.Categorical(probs = probs),
-            components_distribution = tfp.distributions.Normal(loc = loc_eps,
-                                                               scale = scale_eps),
-            validate_args = True),
-        reinterpreted_batch_ndims = 0)
-    return mix_gauss
-
-def MixMultiNormal1(n_components: int = 3,
-                    n_dimensions: int = 4,
-                    eps_loc: float = 0.,
-                    eps_scale: float = 0.,
-                    seed: int = 0) -> tfp.distributions.Mixture:
-    """
-    Defines a mixture of 'n_components' Multivariate Normal distributions in 'n_dimensions' dimensions 
-    with means and stddevs given by the tensors 'loc' and 'scale' with shapes 
-    '(n_components,n_dimensions)'.
-    The components are mixed according to the categorical distribution with probabilities
-    'probs' (with shape equal to 'n_components'). This means that each Multivariate distribution 
-    is assigned a single probability.
-
-    The resulting multivariate distribution has large (random) correlation.
-
-    Note: The functions 'MixMultiNormal1' and 'MixMultiNormal1_indep'
-    generate identical samples, different from the samples generated by
-    'MixMultiNormal2' and 'MixMultiNormal2_indep' (also identical).
-    
-    Args:
-        n_components: int, number of components
-        n_dimensions: int, number of dimensions
-        seed: int, random seed
-        
-    Returns:
-        mix_gauss: tfp.distributions.Mixture, mixture of Gaussians
-    """
-    reset_random_seeds(seed)
-    loc: np.ndarray = np.random.sample([n_components, n_dimensions])*10
-    loc_eps: np.ndarray = np.random.uniform(loc-eps_loc, loc+eps_loc)
-    scale: np.ndarray = np.random.sample([n_components,n_dimensions])
-    scale_eps: np.ndarray = np.random.uniform(scale-eps_scale, scale+eps_scale)
-    probs: np.ndarray = np.random.sample(n_components)
-    components: List[tfp.distributions.MultivariateNormalDiag] = []
-    for i in range(n_components):
-        components.append(tfp.distributions.MultivariateNormalDiag(loc = loc_eps[i],
-                                                                   scale_diag = scale_eps[i]))
-    mix_gauss: tfp.distributions.Mixture = tfp.distributions.Mixture(
-        cat = tfp.distributions.Categorical(probs = probs),
-        components = components,
-        validate_args = True)
-    return mix_gauss
-    
-def MixMultiNormal2(n_components: int = 3,
-                    n_dimensions: int = 4,
-                    eps_loc: float = 0.,
-                    eps_scale: float = 0.,
-                    seed: int = 0) -> tfp.distributions.MixtureSameFamily:
-    """
-    Defines a mixture of 'n_components' Multivariate Normal distributions in 'n_dimensions' dimensions 
-    with means and stddevs given by the tensors 'loc' and 'scale' with shapes 
-    '(n_components,n_dimensions)'.
-    The components are mixed according to the categorical distribution with probabilities
-    'probs' (with shape equal to 'n_components'). This means that each Multivariate distribution 
-    is assigned a single probability.
-
-    The resulting multivariate distribution has large (random) correlation.
-
-    Note: The functions 'MixMultiNormal1' and 'MixMultiNormal1_indep'
-    generate identical samples, different from the samples generated by
-    'MixMultiNormal2' and 'MixMultiNormal2_indep' (also identical).
-    
-    Args:
-        n_components: int, number of components
-        n_dimensions: int, number of dimensions
-        seed: int, random seed
-
-    Returns:
-        mix_gauss: tfp.distributions.MixtureSameFamily, mixture of Gaussians
-    """
-    reset_random_seeds(seed)
-    loc: np.ndarray = np.random.sample([n_components, n_dimensions])*10
-    loc_eps: np.ndarray = np.random.uniform(loc-eps_loc, loc+eps_loc)
-    scale: np.ndarray = np.random.sample([n_components,n_dimensions])
-    scale_eps: np.ndarray = np.random.uniform(scale-eps_scale, scale+eps_scale)
-    probs = np.random.sample(n_components)
-    mix_gauss: tfp.distributions.MixtureSameFamily = tfp.distributions.MixtureSameFamily(
-        mixture_distribution = tfp.distributions.Categorical(probs = probs),
-        components_distribution = tfp.distributions.MultivariateNormalDiag(loc = loc_eps,
-                                                                           scale_diag = scale_eps),
-        validate_args=True)
-    return mix_gauss
-
-def MixMultiNormal1_indep(n_components: int = 3,
-                          n_dimensions: int = 4,
-                          eps_loc: float = 0.,
-                          eps_scale: float = 0.,
-                          seed: int = 0) -> tfp.distributions.Independent:
-    """
-    Defines a mixture of 'n_components' Multivariate Normal distributions in 'n_dimensions' dimensions 
-    with means and stddevs given by the tensors 'loc' and 'scale' with shapes 
-    '(n_components,n_dimensions)'.
-    The components are mixed according to the categorical distribution with probabilities
-    'probs' (with shape equal to 'n_components'). This means that each Multivariate distribution 
-    is assigned a single probability.
-
-    The resulting multivariate distribution has large (random) correlation.
-
-    Note: The functions 'MixMultiNormal1' and 'MixMultiNormal1_indep'
-    generate identical samples, different from the samples generated by
-    'MixMultiNormal2' and 'MixMultiNormal2_indep' (also identical).
-    
-    Args:
-        n_components: int, number of components
-        n_dimensions: int, number of dimensions
-        seed: int, random seed
-
-    Returns:
-        mix_gauss: tfp.distributions.Independent, mixture of Gaussians
-    """
-    reset_random_seeds(seed)
-    loc: np.ndarray = np.random.sample([n_components, n_dimensions])*10
-    loc_eps: np.ndarray = np.random.uniform(loc-eps_loc, loc+eps_loc)
-    scale: np.ndarray = np.random.sample([n_components,n_dimensions])
-    scale_eps: np.ndarray = np.random.uniform(scale-eps_scale, scale+eps_scale)
-    probs: np.ndarray = np.random.sample(n_components)
-    components: List[tfp.distributions.MultivariateNormalDiag] = []
-    for i in range(n_components):
-        components.append(tfp.distributions.MultivariateNormalDiag(loc = loc_eps[i],
-                                                                   scale_diag = scale_eps[i]))
-    mix_gauss: tfp.distributions.Independent = tfp.distributions.Independent(
-        distribution = tfp.distributions.Mixture(cat = tfp.distributions.Categorical(probs = probs),
-                                                 components = components,
-                                                 validate_args = True),
-        reinterpreted_batch_ndims = 0)
-    return mix_gauss
-    
-def MixMultiNormal2_indep(n_components: int = 3,
-                          n_dimensions: int = 4,
-                          eps_loc: float = 0.,
-                          eps_scale: float = 0.,
-                          seed: int = 0) -> tfp.distributions.Independent:
-    """
-    Defines a mixture of 'n_components' Multivariate Normal distributions in 'n_dimensions' dimensions 
-    with means and stddevs given by the tensors 'loc' and 'scale' with shapes 
-    '(n_components,n_dimensions)'.
-    The components are mixed according to the categorical distribution with probabilities
-    'probs' (with shape equal to 'n_components'). This means that each Multivariate distribution 
-    is assigned a single probability.
-
-    The resulting multivariate distribution has large (random) correlation.
-
-    Note: The functions 'MixMultiNormal1' and 'MixMultiNormal1_indep'
-    generate identical samples, different from the samples generated by
-    'MixMultiNormal2' and 'MixMultiNormal2_indep' (also identical).
-    
-    Args:
-        n_components: int, number of components
-        n_dimensions: int, number of dimensions
-        seed: int, random seed
-
-    Returns:
-        mix_gauss: tfp.distributions.Independent, mixture of Gaussians
-    """
-    reset_random_seeds(seed)
-    loc: np.ndarray = np.random.sample([n_components, n_dimensions])*10
-    loc_eps: np.ndarray = np.random.uniform(loc-eps_loc, loc+eps_loc)
-    scale: np.ndarray = np.random.sample([n_components,n_dimensions])
-    scale_eps: np.ndarray = np.random.uniform(scale-eps_scale, scale+eps_scale)
-    probs: np.ndarray = np.random.sample(n_components)
-
-    mix_gauss: tfp.distributions.Independent = tfp.distributions.Independent(
-        distribution = tfp.distributions.MixtureSameFamily(
-            mixture_distribution = tfp.distributions.Categorical(probs = probs),
-            components_distribution = tfp.distributions.MultivariateNormalDiag(loc = loc_eps,
-                                                                               scale_diag = scale_eps),
-            validate_args = True),
-        reinterpreted_batch_ndims = 0)
-    return mix_gauss
-
-#def generate_random_correlation_matrix(n, seed=0):
-#    reset_random_seeds(seed)  
-#    A = np.random.randn(n, n)
-#    A = (A + A.T) / 2
-#    A = np.dot(A, A.T)
-#    D = np.sqrt(np.diag(1 / np.diag(A)))
-#    correlation_matrix = np.dot(D, np.dot(A, D))
-#    return correlation_matrix
-
-#def generate_random_correlation_matrix(n, seed=0):
-#    if seed is not None:
-#        np.random.seed(seed)
-#    A = np.random.normal(size=(n, n))
-#    B = np.dot(A, A.T)
-#    D = np.sqrt(np.diag(B))
-#    correlation_matrix = B / np.outer(D, D)
-#    return correlation_matrix
-
-def generate_random_correlation_matrix(n, 
-                                       seed = 0,
-                                       n_samples = 50_000):
-    reset_random_seeds(seed)
-    mix = MixtureGaussian(3, n, 0., 0., seed)
-    samp = mix.sample(n_samples).numpy()
-    df = pd.DataFrame(samp)
-    corr = df.corr().to_numpy()
-    return corr
-
-def MultiNormal1(n_dimensions: int = 4,
-                 eps_loc: float = 0.,
-                 eps_scale: float = 0.,
-                 seed: int = 0
-                ) -> tfp.distributions.MultivariateNormalTriL:
-    reset_random_seeds(seed)
-    loc: np.ndarray = np.random.sample(n_dimensions) * 10
-    loc_eps_np: np.ndarray = np.random.uniform(loc - eps_loc, loc + eps_loc)
-    loc_eps: tf.Tensor = tf.constant(loc_eps_np, dtype = tf.float32)
-    correlation_matrix_np: np.ndarray = generate_random_correlation_matrix(n_dimensions, seed = seed)
-    correlation_matrix: tf.Tensor = tf.constant(correlation_matrix_np * eps_scale, dtype = tf.float32)
-    scale_eps: tf.Tensor = tf.linalg.cholesky(correlation_matrix) # type: ignore
-    mvn = tfp.distributions.MultivariateNormalTriL(loc = loc_eps, 
-                                                   scale_tril = scale_eps)
-    return mvn
 
 def describe_distributions(distributions: List[tfp.distributions.Distribution]) -> None:
     """
