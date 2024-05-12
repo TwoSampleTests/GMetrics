@@ -116,8 +116,8 @@ def compute_exclusion_bisection(reference_distribution: tfp.distributions.Distri
                                                             **deform_kwargs)
     
         TwoSampleTestInputs = GMetrics.TwoSampleTestInputs(dist_1_input = dist_1,
-                                                        dist_2_input = dist_2,
-                                                        **test_kwargs)
+                                                           dist_2_input = dist_2,
+                                                           **test_kwargs)
         
         Metric = metric_class(TwoSampleTestInputs, **metric_kwargs) # type: ignore
         Metric.Test_tf(max_vectorize=max_vectorize)
