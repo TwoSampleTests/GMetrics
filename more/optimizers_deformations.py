@@ -350,7 +350,7 @@ def compute_exclusion_LR_bisection(reference_distribution: tfp.distributions.Dis
         LRMetric_alt = GMetrics.LRMetric(TwoSampleTestInputs, **metric_kwargs_alt)
         LRMetric_alt.Test_tf(max_vectorize = max_vectorize)
         metric_mean = np.mean(LRMetric_alt.Results[-1].result_value[metric_result_key]) * metric_scale_func(ns, ndims) # type: ignore
-        metric_std = np.mean(LRMetric_alt.Results[-1].result_value[metric_result_key]) * metric_scale_func(ns, ndims) # type: ignore
+        metric_std = np.std(LRMetric_alt.Results[-1].result_value[metric_result_key]) * metric_scale_func(ns, ndims) # type: ignore
         
         if bound == "upper":
             metric = metric_mean - metric_std
