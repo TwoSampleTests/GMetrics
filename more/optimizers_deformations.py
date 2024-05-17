@@ -282,7 +282,7 @@ def compute_exclusion_LR_bisection(reference_distribution: tfp.distributions.Dis
     metrics_mean_list = []
     metrics_std_list = []
     eps_list = []
-    exclusion_list = []
+    exclusion_list = [["CL", "metric_name", "bound", "epsilon_value", "metric_tested", "metric_mean", "metric_std", "test_timing"]]
     
     metric_threshold_number = 0
     eps_min_start = eps_min
