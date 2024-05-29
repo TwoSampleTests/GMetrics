@@ -684,7 +684,7 @@ class KSTest(TwoSampleTestBase):
         def compute_test(max_vectorize: int = 100) -> Tuple[DataTypeTF, DataTypeTF, DataTypeTF, DataTypeTF, DataTypeTF, DataTypeTF]:
             # Check if numerical distributions are empty and print a warning if so
             conditional_tf_print(tf.logical_and(tf.equal(tf.shape(dist_1_num[0])[0],0),self.verbose), "The dist_1_num tensor is empty. Batches will be generated 'on-the-fly' from dist_1_symb.") # type: ignore
-            conditional_tf_print(tf.logical_and(tf.equal(tf.shape(dist_1_num[0])[0],0),self.verbose), "The dist_2_num tensor is empty. Batches will be generated 'on-the-fly' from dist_2_symb.") # type: ignore
+            conditional_tf_print(tf.logical_and(tf.equal(tf.shape(dist_2_num[0])[0],0),self.verbose), "The dist_2_num tensor is empty. Batches will be generated 'on-the-fly' from dist_2_symb.") # type: ignore
                         
             # Ensure that max_vectorize is an integer larger than ndims
             max_vectorize = int(tf.cast(tf.maximum(max_vectorize, ndims),tf.int32)) # type: ignore
