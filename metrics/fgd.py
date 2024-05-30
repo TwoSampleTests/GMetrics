@@ -49,31 +49,31 @@ def _calculate_frechet_distance_tf(mu1_input: DataType,
     """
     TensorFlow implementation of the Frechet Distance.
     """
-    def scipy_covmean_sqrtm():
-        import scipy.linalg as 
-        sigma1 = sigma1_input.numpy()
-        sigma2 = sigma2_input.numpy()
-        # Product might be almost singular
-        covmean, _ = scipy.linalg.sqrtm(sigma1.dot(sigma2), disp=False)
-        if not np.isfinite(covmean).all():
-            msg = (
-                "fid calculation produces singular product; " "adding %s to diagonal of cov estimates"
-            ) % eps
-            offset = np.eye(sigma1.shape[0]) * eps
-            covmean = scipy.linalg.sqrtm((sigma1 + offset).dot(sigma2 + offset))
-
-        # Numerical error might give slight imaginary component
-        if np.iscomplexobj(covmean):
-            if not (
-                np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3)
-                or np.isclose(np.trace(covmean.imag) / np.trace(covmean.real), 0, atol=1e-3)
-            ):
-                im_trace = np.trace(covmean.imag)
-                re_trace = np.trace(covmean.real)
-
-            covmean = covmean.real
-        
-        return covmean
+    #def scipy_covmean_sqrtm():
+    #    import scipy.linalg as 
+    #    sigma1 = sigma1_input.numpy()
+    #    sigma2 = sigma2_input.numpy()
+    #    # Product might be almost singular
+    #    covmean, _ = scipy.linalg.sqrtm(sigma1.dot(sigma2), disp=False)
+    #    if not np.isfinite(covmean).all():
+    #        msg = (
+    #            "fid calculation produces singular product; " "adding %s to diagonal of cov estimates"
+    #        ) % eps
+    #        offset = np.eye(sigma1.shape[0]) * eps
+    #        covmean = scipy.linalg.sqrtm((sigma1 + offset).dot(sigma2 + offset))
+    #
+    #    # Numerical error might give slight imaginary component
+    #    if np.iscomplexobj(covmean):
+    #        if not (
+    #            np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3)
+    #            or np.isclose(np.trace(covmean.imag) / np.trace(covmean.real), 0, atol=1e-3)
+    #        ):
+    #            im_trace = np.trace(covmean.imag)
+    #            re_trace = np.trace(covmean.real)
+    #
+    #        covmean = covmean.real
+    #    
+    #    return covmean
             
     mu1: tf.Tensor = tf.expand_dims(mu1_input, axis=-1) if mu1_input.shape.rank == 1 else tf.convert_to_tensor(mu1_input)
     mu2: tf.Tensor = tf.expand_dims(mu2_input, axis=-1) if mu2_input.shape.rank == 1 else tf.convert_to_tensor(mu2_input)
@@ -99,9 +99,10 @@ def _calculate_frechet_distance_tf(mu1_input: DataType,
                             lambda: tf.math.real(covmean_sqrtm),
                             lambda: covmean_sqrtm)
     
-    covmean_sqrtm = tf.cond(tf.reduce_all(tf.math.is_finite(covmean_sqrtm)), 
-                            lambda: covmean_sqrtm, 
-                            scipy_covmean_sqrtm)
+    # Use scipy.linalg.sqrtm as a backup
+    #covmean_sqrtm = tf.cond(tf.reduce_all(tf.math.is_finite(covmean_sqrtm)), 
+    #                        lambda: covmean_sqrtm, 
+    #                        scipy_covmean_sqrtm)
     
     tr_covmean: tf.Tensor = tf.linalg.trace(covmean_sqrtm)
 
