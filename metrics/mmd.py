@@ -351,7 +351,7 @@ class MMDMetric(TwoSampleTestBase):
                 dist_2_k = set_dist_num_from_symb(dist = dist_2_symb, nsamples = batch_size, dtype = dtype)
             metric: float
             metric_error: float
-            metric, metric_error = JMetrics.mmd(dist_1_k, dist_2_k, **mmd_kwargs)
+            metric, metric_error = JMetrics.kpd(dist_1_k, dist_2_k, **mmd_kwargs)
             metric_list.append(metric)
             metric_error_list.append(metric_error)
             update_progress_bar()
