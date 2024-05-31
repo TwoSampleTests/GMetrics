@@ -288,7 +288,8 @@ def parse_input_dist_tf(dist_input: DataDistType,
         conditional_tf_print(verbose, "Input distribution is a numeric numpy array or tf.Tensor.")
         if tf.rank(dist_input) != 2:
             tf.debugging.assert_equal(tf.rank(dist_input), 2, "Input must be a 2-dimensional numpy array or a tfp.distributions.Distribution object.")
-        dist_symb = tfp.distributions.Normal(loc=tf.zeros(dist_input.shape[1]), scale=tf.ones(dist_input.shape[1])) # type: ignore
+        dist_symb = tfp.distributions.Normal(loc = tf.zeros(dist_input.shape[1], dtype = dist_input.dtype), 
+                                             scale = tf.ones(dist_input.shape[1], dtype = dist_input.dtype)) # type: ignore
         dist_num = tf.convert_to_tensor(dist_input)
         nsamples, ndims = tf.unstack(tf.shape(dist_num))
         return tf.constant(False), dist_symb, dist_num, ndims, nsamples

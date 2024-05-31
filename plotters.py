@@ -43,6 +43,7 @@ def plot_corners(dist_1,
                  title2 = None,
                  color1 = 'green',
                  color2 = 'red',
+                 labels = None,
                  plot_title = "Params contours",
                  title_kwargs = None,
                  legend_labels = None,
@@ -85,10 +86,11 @@ def plot_corners(dist_1,
     samp_1 = samp_1_no_nans[:shape[0]]
     samp_2 = samp_2_no_nans[:shape[0]]
     sigma_contours = sigma_contours if sigma_contours else [1, 2, 3]
-    labels = []
-    for i in range(1,shape[1]+1):
-        labels.append(r"$\mathbf{x}_{%d}$" % i)
-        i = i+1
+    if not labels:
+        labels = []
+        for i in range(1,shape[1]+1):
+            labels.append(r"$\mathbf{x}_{%d}$" % i)
+            i = i+1
     thin = int(shape[1]/max_dim)+1
     if thin<=2:
         thin = 1
