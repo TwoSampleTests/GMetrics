@@ -91,11 +91,11 @@ def modify_covariance_matrix(original_covariance, eps):
     modified_covariance = modified_diag + modified_off_diag
     return modified_covariance
     
-def deform_cov_diag(d: Union[tfd.Distribution, tf.Tensor],
-                    eps: float = 0.,
-                    seed: int = 0,
-                    nsamples: int = 100_000
-                   ) -> Union[tfd.Distribution, tf.Tensor]:
+def deform_cov_off_diag(d: Union[tfd.Distribution, tf.Tensor],
+                        eps: float = 0.,
+                        seed: int = 0,
+                        nsamples: int = 100_000
+                       ) -> Union[tfd.Distribution, tf.Tensor]:
     if eps < 0:
         raise ValueError("Epsilon must be non-negative")
     if float(eps) == 0.:
@@ -103,9 +103,11 @@ def deform_cov_diag(d: Union[tfd.Distribution, tf.Tensor],
     else:
         GMetrics.utils.reset_random_seeds(seed)
         if isinstance(d, tf.Tensor):
+            original_mean = tf.reduce_mean(d,axis=0)
             original_covariance = tfp.stats.covariance(d, sample_axis = 0)
         elif isinstance(d, tfd.Distribution):
             dtype = d.mean().dtype
+            original_mean = d.mean()
             try:
                 original_covariance = d.covariance()
             except:
@@ -120,7 +122,6 @@ def deform_cov_diag(d: Union[tfd.Distribution, tf.Tensor],
                                                                      tf.linalg.matrix_transpose(chol_modified),
                                                                      lower=False)
         transformation_matrix = tf.linalg.matrix_transpose(transformation_matrix_transpose)
-        original_mean = tf.reduce_mean(sample,axis=0)
         shift_to_zero = tfb.Shift(-original_mean)
         linear_transform = tfb.ScaleMatvecTriL(scale_tril=transformation_matrix)
         shift_back = tfb.Shift(original_mean)
