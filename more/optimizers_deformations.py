@@ -244,7 +244,15 @@ def compute_exclusion_bisection_dataset(dataset: tf.Tensor,
         print("\n======================================================")
         print(f"=============== {metric_config['name']} - {deformation} ===============")
         print("======================================================") 
-        
+    
+    def preprocess_data(data,means,stds):
+            preprocess_data=(data-means)/stds
+            return preprocess_data
+
+    def postprocess_data(data,means,stds):
+        postprocess_data=data*stds+means
+        return postprocess_data
+    
     metric_config = dict(metric_config)
     test_kwargs = dict(test_kwargs)
     niter_null = test_kwargs.pop("niter_null")
@@ -317,21 +325,30 @@ def compute_exclusion_bisection_dataset(dataset: tf.Tensor,
         
         dstmp = shuffle_dataset(seed = iteration)
         dist_1 = tf.cast(dstmp[:l], tf.float64)
-        dist_2 = deformed_distribution(tf.cast(dstmp[l:], tf.float64),
-                                       **deform_kwargs)
+        dist_2_tmp = tf.cast(dstmp[l:], tf.float64)
         del(dstmp)
-    
+        mean = tf.reduce_mean(dist_2_tmp, axis=0)
+        std = tf.math.reduce_std(dist_2_tmp, axis=0)
+        dist_2_preprocessed = preprocess_data(dist_2_tmp, mean, std)
+        dist_2_preprocessed_deformed = deformed_distribution(dist_2_preprocessed,
+                                                             **deform_kwargs)
+        dist_2 = postprocess_data(dist_2_preprocessed_deformed, mean, std)
         TwoSampleTestInputs = GMetrics.TwoSampleTestInputs(dist_1_input = dist_1,
                                                            dist_2_input = dist_2,
                                                            **test_kwargs)
-        
         Metric = metric_class(TwoSampleTestInputs, **metric_kwargs) # type: ignore
         Metric.Test_tf(max_vectorize=max_vectorize)
         for i in range(1, nbootstrap):
             dstmp = shuffle_dataset(seed = iteration + 1000 * i + i)
             dist_1 = tf.cast(dstmp[:l], tf.float64)
-            dist_2 = deformed_distribution(tf.cast(dstmp[l:], tf.float64),
-                                           **deform_kwargs)
+            dist_2_tmp = tf.cast(dstmp[l:], tf.float64)
+            del(dstmp)
+            mean = tf.reduce_mean(dist_2_tmp, axis=0)
+            std = tf.math.reduce_std(dist_2_tmp, axis=0)
+            dist_2_preprocessed = preprocess_data(dist_2_tmp, mean, std)
+            dist_2_preprocessed_deformed = deformed_distribution(dist_2_preprocessed,
+                                                                 **deform_kwargs)
+            dist_2 = postprocess_data(dist_2_preprocessed_deformed, mean, std)
             #KSTestNull.Inputs.dist_1_input = dist_1 # This is the consistent way, but slower
             TwoSampleTestInputs._dist_1_num = dist_1[:niter*batch_size_test] # Overwriting the _dist_1_num attribute. Less consistent, but         faster
             #KSTestNull.Inputs.dist_2_input = dist_2 # This is the consistent way, but slower
@@ -339,7 +356,6 @@ def compute_exclusion_bisection_dataset(dataset: tf.Tensor,
             print("\n===========================================================")
             print(f"Testing from {i * niter} to {(i+1) * niter} of {niter * nbootstrap} samples.")
             Metric.Test_tf(max_vectorize = max_vectorize)
-            del(dstmp)
             
         dist_null  = np.array(Metric.Results[0].result_value[metric_result_key])
         for i in range(1,len(Metric.Results)):
