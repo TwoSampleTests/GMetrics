@@ -14,7 +14,7 @@ sys.path.insert(0,'../utils_func/')
 sys.path.insert(0,'../')
 import GMetrics # type: ignore
 from GMetrics.utils import save_update_metrics_config, save_update_LR_metrics_config, se_mean, se_std # type: ignore
-from . import MixtureDistributions # type: ignore
+from . import deformations # type: ignore
 
 from typing import Tuple, Union, Optional, Type, Callable, Dict, List, Any
 from numpy import typing as npt
@@ -112,8 +112,8 @@ def compute_exclusion_bisection(reference_distribution: tfp.distributions.Distri
         print(f"\n------------ {iteration} - {metric_thresholds[metric_threshold_number][0]} CL - {bound} bound -----------")
         print(f"eps = {eps} - deformation = {deformation}")
         
-        dist_2 = MixtureDistributions.deformed_distribution(dist_1,
-                                                            **deform_kwargs)
+        dist_2 = deformations.deformed_distribution(dist_1,
+                                                    **deform_kwargs)
     
         TwoSampleTestInputs = GMetrics.TwoSampleTestInputs(dist_1_input = dist_1,
                                                            dist_2_input = dist_2,
@@ -317,8 +317,8 @@ def compute_exclusion_LR_bisection(reference_distribution: tfp.distributions.Dis
 
         print(f"Computing null distribution")
         start_null = timer()
-        dist_2 = MixtureDistributions.deformed_distribution(dist_1,
-                                                            **deform_kwargs)
+        dist_2 = deformations.deformed_distribution(dist_1,
+                                                    **deform_kwargs)
         
         TwoSampleTestInputs = GMetrics.TwoSampleTestInputs(dist_1_input = dist_1,
                                                            dist_2_input = dist_2,
