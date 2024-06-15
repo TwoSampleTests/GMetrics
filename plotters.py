@@ -362,6 +362,7 @@ def plot_corr_matrix(dist: np.ndarray,
                      figure_name = "corre_matrix_plot.pdf",
                      max_points = 10_000,
                      title = None,
+                     labels = None,
                      show_labels = True,
                      show = False,
                      save = True
@@ -375,10 +376,8 @@ def plot_corr_matrix(dist: np.ndarray,
     except:
         samp = dist
     shape = samp.shape
-    labels = []
-    for i in range(1,shape[1]+1):
-        labels.append(r"$\mathbf{x}_{%d}$" % i)
-        i = i+1
+    if not labels:
+        labels = [r"$\mathbf{x}_{%d}$" % i for i in range(1, samp.shape[1] + 1)]
     #df: pd.DataFrame = pd.DataFrame(samp, columns=labels)
     #f: plt.Figure = plt.figure(figsize=(18, 18))
     #plt.matshow(df.corr(), fignum=f.number)
@@ -424,12 +423,13 @@ def plot_corr_matrix(dist: np.ndarray,
 def plot_corr_matrix_side_by_side(dist_1: tfp.distributions.Distribution,
                                   dist_2: tfp.distributions.Distribution,
                                   path_to_plots,
-                                  figure_name="corre_matrix_plot_side_by_side.pdf",
-                                  max_points=10_000,
+                                  figure_name = "corre_matrix_plot_side_by_side.pdf",
+                                  max_points = 10_000,
                                   title = None,
-                                  show_labels=True,
-                                  show=False,
-                                  save=False) -> None:
+                                  labels = None,
+                                  show_labels = True,
+                                  show = False,
+                                  save = False) -> None:
     """
     Plots two correlation matrices side by side with a single colorbar in the middle.
 
@@ -452,7 +452,8 @@ def plot_corr_matrix_side_by_side(dist_1: tfp.distributions.Distribution,
         samp_2 = dist_2.sample(max_points).numpy()
     except:
         samp_2 = dist_2
-    labels = [r"$\mathbf{x}_{%d}$" % i for i in range(1, samp_1.shape[1] + 1)]
+    if not labels:
+        labels = [r"$\mathbf{x}_{%d}$" % i for i in range(1, samp_1.shape[1] + 1)]
 
     # Create DataFrames
     df1 = pd.DataFrame(samp_1, columns=labels)
