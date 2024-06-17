@@ -409,6 +409,21 @@ def compute_exclusion_bisection_dataset(dataset: tf.Tensor,
             iteration = 0
             eps_min, eps_max = eps, eps_max_start # Initialize the bounds
             
+        # Implement the condition to check if epsilon adjustment is stuck
+        if relative_error_eps < x_tol / 10 and relative_error_metric > fn_tol:
+            if verbose:
+                print(f"=======> epsilon adjustment is stuck, moving epsilon value randomly")
+            # Move eps_min and eps_max by 50% around the present eps value
+            np.random.seed(iteration)
+            eps_new = np.random.normal(eps, eps)
+            # Ensure that eps_new is greater than 0
+            eps_new = max(eps_new, 0)
+            # Update eps_min and eps_max by expanding them symmetrically
+            eps_min = max(min(eps_min, eps_new - np.abs(eps - eps_new)), 0)
+            eps_max = max(eps_max, eps_new + np.abs(eps - eps_new))
+            # Set the new eps
+            eps = eps_new
+        
         if iteration == max_iterations - 1:
             end = timer()
             exclusion_list.append([metric_thresholds[metric_threshold_number][0], metric_name, bound, None, None, None, None, end - start]) # type: ignore
