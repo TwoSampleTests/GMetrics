@@ -418,7 +418,7 @@ def compute_exclusion_bisection_dataset(dataset: tf.Tensor,
             eps_new = np.random.normal(eps, eps)
             # Ensure that eps_new is greater than 0
             eps_new = max(eps_new, 0)
-            eps_mean = np.mean([eps eps_new])
+            eps_mean = np.mean([eps, eps_new])
             delta_eps = np.abs(eps - eps_new)
             # Update eps_min and eps_max by expanding them symmetrically
             eps_min = max(min(eps_min, eps_mean - delta_eps), 0)
