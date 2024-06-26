@@ -360,13 +360,10 @@ def compute_exclusion_bisection_dataset(dataset: tf.Tensor,
                 print(f"Testing from {i * niter} to {(i+1) * niter} of {niter * nbootstrap} samples.")
             Metric.Test_tf(max_vectorize = max_vectorize)
             
-        dist_null = np.concatenate([np.array(result.result_value[metric_result_key]) for result in Metric.Results])
-        dist_null *= metric_scale_func(ns, ndims)
-            
-        #dist_null  = np.array(Metric.Results[0].result_value[metric_result_key])
-        #for i in range(1,len(Metric.Results)):
-        #    dist_null = np.concatenate((dist_null, np.array(Metric.Results[i].result_value[metric_result_key])))
-        #dist_null = dist_null * metric_scale_func(ns, ndims)
+        dist_null  = np.array(Metric.Results[0].result_value[metric_result_key])
+        for i in range(1,len(Metric.Results)):
+            dist_null = np.concatenate((dist_null, np.array(Metric.Results[i].result_value[metric_result_key])))
+        dist_null = dist_null * metric_scale_func(ns, ndims)
         
         metric_mean = np.mean(dist_null) # type: ignore
         metric_std = np.std(dist_null) # type: ignore
@@ -623,8 +620,10 @@ def compute_exclusion_bisection_speed_dataset(dataset: tf.Tensor,
                     print(f"Testing from {i * niter} to {(i + 1) * niter} of {niter * nbootstrap} samples.")
                 Metric.Test_tf(max_vectorize=max_vectorize)
                 
-            dist_null = np.concatenate([np.array(result.result_value[metric_result_key]) for result in Metric.Results])
-            dist_null *= metric_scale_func(ns, ndims)
+            dist_null  = np.array(Metric.Results[0].result_value[metric_result_key])
+            for i in range(1,len(Metric.Results)):
+                dist_null = np.concatenate((dist_null, np.array(Metric.Results[i].result_value[metric_result_key])))
+            dist_null = dist_null * metric_scale_func(ns, ndims)
             
             metric_mean = np.mean(dist_null)  # type: ignore
             metric_std = np.std(dist_null)  # type: ignore

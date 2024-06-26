@@ -71,7 +71,7 @@ def deform_cov_diag(d: Union[tfd.Distribution, tf.Tensor],
             deformed_d = chained_bijector.forward(d)
         elif isinstance(d, tfd.Distribution):
             deformed_d = tfd.TransformedDistribution(distribution = d,
-                                                    bijector = chained_bijector)
+                                                     bijector = chained_bijector)
         return deformed_d
 
 def modify_covariance_matrix(original_covariance, eps):
