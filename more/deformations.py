@@ -40,7 +40,7 @@ def deform_mean(d: Union[tfd.Distribution, tf.Tensor],
             deformed_d = d + shift_vector
         elif isinstance(d, tfd.Distribution):
             deformed_d = tfd.TransformedDistribution(distribution = d,
-                                                    bijector = tfb.Shift(shift = shift_vector))
+                                                     bijector = tfb.Shift(shift = shift_vector))
         return deformed_d
     
 def deform_cov_diag(d: Union[tfd.Distribution, tf.Tensor],
@@ -56,13 +56,14 @@ def deform_cov_diag(d: Union[tfd.Distribution, tf.Tensor],
         if isinstance(d, tf.Tensor):
             shape = tf.reduce_mean(d,axis=0).shape
             dtype = tf.reduce_mean(d,axis=0).dtype
+            original_mean = tf.reduce_mean(d,axis=0)
         elif isinstance(d, tfd.Distribution):
             shape = d.mean().shape
             dtype = d.mean().dtype
+            original_mean = d.mean()
         else:
             raise ValueError("Input must be either a tf.Tensor or a tfd.Distribution")
         scale_vector = tf.random.uniform(shape, minval=1., maxval=1. + eps, dtype=dtype)
-        original_mean = tf.reduce_mean(d,axis=0)
         shift_to_zero = tfb.Shift(-original_mean)
         scale = tfb.Scale(scale_vector)
         shift_back = tfb.Shift(original_mean)
