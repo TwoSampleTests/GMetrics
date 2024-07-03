@@ -25,17 +25,17 @@ def deform_mean(d: Union[tfd.Distribution, tf.Tensor],
     else:
         GMetrics.utils.reset_random_seeds(seed)
         if isinstance(d, tf.Tensor):
-            shape = tf.reduce_mean(d,axis=0).shape
-            dtype = tf.reduce_mean(d,axis=0).dtype
+            shape = tf.reduce_mean(d, axis=0).shape
+            dtype = tf.reduce_mean(d, axis=0).dtype
         elif isinstance(d, tfd.Distribution):
             shape = d.mean().shape
             dtype = d.mean().dtype
         else:
             raise ValueError("Input must be either a tf.Tensor or a tfd.Distribution")
         shift_vector = tf.random.uniform(shape,
-                                            minval = -eps,
-                                            maxval = eps,
-                                            dtype = dtype)
+                                         minval = -eps,
+                                         maxval = eps,
+                                         dtype = dtype)
         if isinstance(d, tf.Tensor):
             deformed_d = d + shift_vector
         elif isinstance(d, tfd.Distribution):

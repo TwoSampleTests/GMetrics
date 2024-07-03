@@ -712,7 +712,7 @@ def compute_exclusion_bisection_speed_dataset(dataset: tf.Tensor,
     end = timer()
     if verbose:
         print("Time elapsed:", end - start_global, "seconds.")
-    result = {metric_name + "_" + deformation + "_" + bound + "_" + timestamp: {"name": metric_confi["name"],
+    result = {metric_name + "_" + deformation + "_" + bound + "_" + timestamp: {"name": metric_config["name"],
                                                                             "deformation": deformation,
                                                                             "bound": bound,
                                                                             "parameters": {"seed_dist": seed_dist,
