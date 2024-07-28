@@ -485,7 +485,8 @@ def plot_corr_matrix_side_by_side(dist_1: tfp.distributions.Distribution,
 
     # Add one colorbar in the middle
     fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])  # Adjust these values to move and resize the colorbar
+    fig.subplots_adjust(top=1.1)
+    cbar_ax = fig.add_axes([0.85, 0.299, 0.05, 0.613])  # Adjust these values to move and resize the colorbar
     fig.colorbar(cax1, cax=cbar_ax)
     
     if title:
