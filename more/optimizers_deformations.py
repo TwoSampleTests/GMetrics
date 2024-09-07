@@ -800,7 +800,6 @@ def compute_exclusion_LR_bisection(reference_distribution: tfp.distributions.Dis
     metrics_config_file = model_dir + "metrics_config.json"
     
     # Define ncomp and ndims
-    ncomp = metric_config["test_config"]["ncomp"]
     ndims = metric_config["test_config"]["ndims"]
     
     # Compute metric scaling factor
@@ -817,6 +816,7 @@ def compute_exclusion_LR_bisection(reference_distribution: tfp.distributions.Dis
     eps_min_start = eps_min
     eps_max_start = eps_max
     eps = (eps_max + eps_min) / 2.
+    eps_min, eps_max = eps_min_start, eps_max_start # Initialize the bounds
     
     start_global = timer()
     start = timer()
@@ -907,7 +907,7 @@ def compute_exclusion_LR_bisection(reference_distribution: tfp.distributions.Dis
             print(f"statistic = {metric} - next threshold = {metric_thresholds[metric_threshold_number][2]} at {metric_thresholds[metric_threshold_number][0]} CL")
 
         relative_error_eps = 2 * (eps_max - eps_min) / (eps_max + eps_min)
-        relative_error_metric = 2 * np.abs(metric_thresholds[metric_threshold_number][2] - metric) / (metric_thresholds[metric_threshold_number][2] + metric)
+        relative_error_metric = 2 * np.abs(metric_thresholds[metric_threshold_number][2] - metric / (metric_thresholds[metric_threshold_number][2] + metric))
         if verbose:
             print(f"relative_error_eps = {relative_error_eps}")
             print(f"relative_error_metric = {relative_error_metric}")

@@ -133,8 +133,9 @@ def deform_cov_diag(d: Union[tfp.distributions.Distribution, tf.Tensor],
 def generate_partial_permutation(num_points: int, 
                                  indices_to_shuffle: tf.Tensor, 
                                  seed: int) -> tf.Tensor:
-    tf.random.set_seed(seed)
+    #print("Seed for partial permutation:", seed)
     perm = tf.range(num_points)
+    #shuffled_indices = tf.random.experimental.stateless_shuffle(indices_to_shuffle, seed = [seed, 0])
     shuffled_indices = tf.random.shuffle(indices_to_shuffle)
     perm = tf.tensor_scatter_nd_update(perm, tf.expand_dims(indices_to_shuffle, 1), shuffled_indices)
     return perm
@@ -145,7 +146,8 @@ class DynamicShufflingBijector(tfb.Bijector):
                  event_shape: int, 
                  seed: int, 
                  shuffle_type: str = "random", 
-                 validate_args=False, name="DynamicShufflingBijector"):
+                 validate_args = False, 
+                 name = "DynamicShufflingBijector"):
         super(DynamicShufflingBijector, self).__init__(forward_min_event_ndims=1, validate_args=validate_args, name=name)
         self.fraction_shuffles = fraction_shuffles
         self.event_shape = event_shape
@@ -155,6 +157,7 @@ class DynamicShufflingBijector(tfb.Bijector):
     def _get_indices_to_shuffle(self, num_points: int) -> tf.Tensor:
         num_shuffles = tf.cast(tf.cast(num_points, tf.float32) * tf.cast(self.fraction_shuffles, tf.float32), tf.int32) # type: ignore
         if self.shuffle_type == "random":
+            #indices_to_shuffle = tf.random.experimental.stateless_shuffle(tf.range(num_points), seed = [self.seed, 0])[:num_shuffles]
             indices_to_shuffle = tf.random.shuffle(tf.range(num_points))[:num_shuffles]
         elif self.shuffle_type == "firsts":
             indices_to_shuffle = tf.range(num_shuffles)
@@ -167,36 +170,51 @@ class DynamicShufflingBijector(tfb.Bijector):
     def _forward(self, x) -> tf.Tensor:
         num_points = tf.shape(x)[0]
         shuffled_features = []
+        indices_to_shuffle = self._get_indices_to_shuffle(num_points)
+        #print("Shuffling indices:", indices_to_shuffle)
         
         for feature_idx in range(self.event_shape):
-            indices_to_shuffle = self._get_indices_to_shuffle(num_points)
+            
             perm = generate_partial_permutation(num_points = num_points, 
                                                 indices_to_shuffle = indices_to_shuffle, 
                                                 seed = self.seed + feature_idx)
+            #print("Permutation for feature", feature_idx, ":", perm)
             shuffled_feature = tf.gather(x[:, feature_idx], perm)
             shuffled_features.append(shuffled_feature)
         
         shuffled_x = tf.stack(shuffled_features, axis=1)
         return shuffled_x
 
-    def _inverse(self, y) -> tf.Tensor:
-        num_points = tf.shape(y)[0]
-        shuffled_features = []
-        
-        for feature_idx in range(self.event_shape):
-            indices_to_shuffle = self._get_indices_to_shuffle(num_points)
-            perm = generate_partial_permutation(num_points = num_points, 
-                                                indices_to_shuffle = indices_to_shuffle, 
-                                                seed = self.seed + feature_idx)
-            inverse_perm = tf.argsort(perm)
-            shuffled_feature = tf.gather(y[:, feature_idx], inverse_perm)
-            shuffled_features.append(shuffled_feature)
-        
-        shuffled_y = tf.stack(shuffled_features, axis=1)
-        return shuffled_y
+    #def _inverse(self, y) -> tf.Tensor:
+    #    num_points = tf.shape(y)[0]
+    #    shuffled_features = []
+    #    
+    #    for feature_idx in range(self.event_shape):
+    #        indices_to_shuffle = self._get_indices_to_shuffle(num_points)
+    #        #print("Shuffling indices for feature", feature_idx, ":", indices_to_shuffle)
+    #        perm = generate_partial_permutation(num_points = num_points, 
+    #                                            indices_to_shuffle = indices_to_shuffle, 
+    #                                            seed = self.seed + feature_idx)
+    #        inverse_perm = tf.argsort(perm)
+    #        #print("Inverse permutation for feature", feature_idx, ":", inverse_perm)
+    #        shuffled_feature = tf.gather(y[:, feature_idx], inverse_perm)
+    #        shuffled_features.append(shuffled_feature)
+    #    
+    #    shuffled_y = tf.stack(shuffled_features, axis=1)
+    #    return shuffled_y
+
+    #def _forward_log_det_jacobian(self, x):
+    #    return tf.zeros(tf.shape(x)[0], dtype=x.dtype)
+    
+    def _inverse(self, y):
+        # This is not truly correct as we don't know the original shift
+        raise NotImplementedError("Inverse is not well defined for partial random permutation.")
 
     def _forward_log_det_jacobian(self, x):
+        # The log determinant of the Jacobian for a pure shift is zero
         return tf.zeros(tf.shape(x)[0], dtype=x.dtype)
+    
+    
 
 def deform_cov_off_diag(d: Union[tfp.distributions.Distribution, tf.Tensor], # type: ignore
                         eps: float = 0., 
@@ -220,9 +238,9 @@ def deform_cov_off_diag(d: Union[tfp.distributions.Distribution, tf.Tensor], # t
         event_shape = d.shape[1]
     elif isinstance(d, tfd.Distribution):
         event_shape = d.event_shape[0]
-    deformation = DynamicShufflingBijector(fraction_shuffles = eps_off, 
-                                           event_shape = event_shape, 
-                                           shuffle_type = shuffle_type, 
+    deformation = DynamicShufflingBijector(fraction_shuffles = eps_off,
+                                           event_shape = event_shape,
+                                           shuffle_type = shuffle_type,
                                            seed = seed)
     if isinstance(d, tf.Tensor):
         deformed_d = deformation.forward(deformed_d)
