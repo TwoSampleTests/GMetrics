@@ -8,8 +8,7 @@ The module supports the following non-parammetric two sample test statistics:
     - Dimension averaged Kolmogorov-Smirnov (KS) test-statistic and p-value
     - Sliced KS test-statistic
     - Sliced Wasserstein Distance (SWD) test-statistic
-    - Frobenius norm of the difference between the correlation matrices (FN) test-statistic
-    - Frechét Gaussian Distance (FGD)
+    - Unbiased Frechét Gaussian Distance (FGD)
     - Maximum Mean Discrepacy (MMD) (the unbiased squared estimator with a polynomial 
     kernel of arbitrary degree is implemented)
 
