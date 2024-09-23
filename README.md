@@ -23,38 +23,45 @@ The module includes the following files and folders:
   Package initialization
 
 - base.py
+
   Base classes for test object, input data parsing, and results
 
-    - metrics/fgd.py
-        Implementation of the FGD metric
+- metrics/fgd.py
+
+  Implementation of the FGD metric
     
-    - metrics/fn.py
-        Implementation of the FN metric
+- metrics/fn.py
 
-    - metrics/ks.py
-        Implementation of the dimension averaged KS metric
+  Implementation of the FN metric
 
-    - metrics/llr.py
-        Implementation of the LLR metric
+- metrics/ks.py
 
-    - metrics/mmd.py
-        Implementation of the MMD metric
+  Implementation of the dimension averaged KS metric
+
+- metrics/llr.py
+
+  Implementation of the LLR metric
+
+- metrics/mmd.py
+
+  Implementation of the MMD metric
     
-    - metrics/sks.py
-        Implementation of the SKS metric
+- metrics/sks.py
 
-    - metrics/swd.py
-        Implementation of the SWD metric
+  Implementation of the SKS metric
 
-    - ultils.py
-        File including utility functions
+- metrics/swd.py
 
-    - notebooks/
-        Folder including Jupyter notebooks with sample/test code
+  Implementation of the SWD metric
 
-    - more/
-        Folder with additional utilities for generating mixture distributions and deformations,
-        and for parameters inference
+- ultils.py
+  File including utility functions
+
+- notebooks/
+  Folder including Jupyter notebooks with sample/test code
+
+- more/
+  Folder with additional utilities for generating mixture distributions and deformations, and for parameters inference
 
 Results obtained with the code are available in the GitHub repositories:
 
