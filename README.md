@@ -5,13 +5,12 @@ the calculation of null-hypotheses, speeding up inference.
 
 The module supports the following non-parammetric two sample test statistics:
 
-    - Dimension averaged Kolmogorov-Smirnov (KS) test-statistic and p-value
-    - Sliced KS test-statistic
-    - Sliced Wasserstein Distance (SWD) test-statistic
-    - The Frobenius norm of the difference between the correlation matrices
-    - Unbiased Frechét Gaussian Distance (FGD)
-    - Maximum Mean Discrepacy (MMD) (the unbiased squared estimator with a polynomial 
-    kernel of arbitrary degree is implemented)
+- Dimension averaged Kolmogorov-Smirnov (KS) test-statistic and p-value
+- Sliced KS test-statistic
+- Sliced Wasserstein Distance (SWD) test-statistic
+- The Frobenius norm of the difference between the correlation matrices
+- Unbiased Frechét Gaussian Distance (FGD)
+- Maximum Mean Discrepacy (MMD) (the unbiased squared estimator with a polynomial kernel of arbitrary degree is implemented)
 
 The module also includes the parametric test-statistic for the log-likelihood ratio (LLR) 
 (computed from the known PDFs), that, when both PDFs are known, 
@@ -19,11 +18,11 @@ can be used as proxy of "best estimator" by the Neyman-Pearson lemma.
 
 The module includes the following files and folders:
 
-    - __init__.py 
-        Package initialization
+- __init__.py 
+  Package initialization
 
-    - base.py
-        Base classes for test object, input data parsing, and results
+- base.py
+  Base classes for test object, input data parsing, and results
 
     - metrics/fgd.py
         Implementation of the FGD metric
