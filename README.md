@@ -50,8 +50,14 @@ The module includes the following files and folders:
         File including utility functions
 
     - notebooks/
-        Folder including Jupyter notebooks  with sample code
+        Folder including Jupyter notebooks with sample/test code
 
     - more/
         Folder with additional utilities for generating mixture distributions and deformations,
         and for parameters inference
+
+Results obtained with the code are available in the GitHub repositories:
+
+    - [GenerativeModelsMetrics](https://github.com/TwoSampleTests/GenerativeModelsMetrics)
+
+    - [JetNetMetrics](https://github.com/TwoSampleTests/JetNetMetrics)
