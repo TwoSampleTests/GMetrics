@@ -58,6 +58,6 @@ The module includes the following files and folders:
 
 Results obtained with the code are available in the GitHub repositories:
 
-    - Mixture of Gaussians and Correlated Gaussians: [GenerativeModelsMetrics](https://github.com/TwoSampleTests/GenerativeModelsMetrics)
+- Mixture of Gaussians and Correlated Gaussians: [GenerativeModelsMetrics](https://github.com/TwoSampleTests/GenerativeModelsMetrics)
 
-    - Gluon jets at particle and jet level: [JetNetMetrics](https://github.com/TwoSampleTests/JetNetMetrics)
+- Gluon jets at particle and jet level: [JetNetMetrics](https://github.com/TwoSampleTests/JetNetMetrics)
