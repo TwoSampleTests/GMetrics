@@ -19,7 +19,8 @@ can be used as proxy of "best estimator" by the Neyman-Pearson lemma.
 The module includes the following files and folders:
 
 - __init__.py 
-    Package initialization
+
+  Package initialization
 
 - base.py
   Base classes for test object, input data parsing, and results
