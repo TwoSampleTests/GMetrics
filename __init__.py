@@ -1,3 +1,4 @@
+from .metrics.NPLM import NPLMMetric
 from .metrics.fn import FNMetric
 from .metrics.fgd import FGDMetric
 from .metrics.mmd import MMDMetric
