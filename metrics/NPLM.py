@@ -173,10 +173,10 @@ class NPLMMetric(TwoSampleTestBase):
         
         self._nplm_kwargs = nplm_kwargs
     
-        print(f"The weight (ratio between the number of points in data sample and reference sample) is: {weight_value}\n"
-              f"The number of Nyström center is: {M_number}\n"
-              f"The lambda value is: {lam_value}\n"
-              f"The number of iterations is: {iterations}")
+        # print(f"The weight (ratio between the number of points in data sample and reference sample) is: {weight_value}\n"
+        #       f"The number of Nyström center is: {M_number}\n"
+        #       f"The lambda value is: {lam_value}\n"
+        #       f"The number of iterations is: {iterations}")
 
     def compute(self) -> None:
         """
@@ -237,8 +237,8 @@ class NPLMMetric(TwoSampleTestBase):
 
         ref_sample_for_sigma = dist_1_symb.sample(10000) #set_dist_num_from_symb(dist = dist_1_symb, nsamples = 10000, dtype = dtype)  
         flk_sigma = candidate_sigma(ref_sample_for_sigma, perc=90)
-        print(f"The gaussian kernel sigma is estimated as the 90th percentile of the pairwise distance among 10000 points extracted from the reference distribution.\n"
-              f"Its value is: {flk_sigma}")
+        # print(f"The gaussian kernel sigma is estimated as the 90th percentile of the pairwise distance among 10000 points extracted from the reference distribution.\n"
+        #       f"Its value is: {flk_sigma}")
 
         flk_config = get_logflk_config(self._nplm_kwargs.get('M'), flk_sigma, self._nplm_kwargs.get('lam'), self._nplm_kwargs.get('weight'), self._nplm_kwargs.get('iter_list'), seed=None, cpu=False) #where do I get M, lam, weight?
         flk_config['seed'] = 0 # seed for center selection
@@ -294,8 +294,8 @@ class NPLMMetric(TwoSampleTestBase):
             Y_k = np.zeros(shape=(dist_1_k.shape[0]+dist_2_k.shape[0],1)) # assign lables
             Y_k[dist_1_k.shape[0]:,:] = np.ones((dist_2_k.shape[0],1))    # flip labels to one for data
             
-            print(f"The shape of X is: {X_k.shape}\n"
-                  f"The shape of X is: {Y_k.shape}")
+            # print(f"The shape of X is: {X_k.shape}\n"
+            #       f"The shape of Y is: {Y_k.shape}")
 
             preds_k = trainer(X_k, Y_k, flk_config)
 
