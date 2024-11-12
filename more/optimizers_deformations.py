@@ -681,7 +681,6 @@ def compute_exclusion_bisection_dataset(dataset: tf.Tensor,
     
     return result
 
-#I still have to modify/implement this 
 def compute_exclusion_bisection_dataset_np(dataset: tf.Tensor, 
                                         metric_config: Dict[str,Any],
                                         test_kwargs: Dict[str,Any],
@@ -786,8 +785,8 @@ def compute_exclusion_bisection_dataset_np(dataset: tf.Tensor,
             print(f"eps = {eps} - deformation = {deformation}")
         
         dstmp = shuffle_dataset(seed = iteration)
-        dist_1 = tf.cast(dstmp[:l], tf.float64)          #to modify
-        dist_2_tmp = tf.cast(dstmp[l:], tf.float64)      #to modify 
+        dist_1 = tf.cast(dstmp[:l], tf.float64)          
+        dist_2_tmp = tf.cast(dstmp[l:], tf.float64)      
         del(dstmp)
         mean = np.mean(dist_2_tmp, axis=0)
         std = np.std(dist_2_tmp, axis=0)
@@ -803,8 +802,8 @@ def compute_exclusion_bisection_dataset_np(dataset: tf.Tensor,
         
         for i in range(1, nbootstrap):
             dstmp = shuffle_dataset(seed = iteration + 1000 * i + i)
-            dist_1 = tf.cast(dstmp[:l], tf.float64)      #to modify
-            dist_2_tmp = tf.cast(dstmp[l:], tf.float64)  #to modify 
+            dist_1 = tf.cast(dstmp[:l], tf.float64)      
+            dist_2_tmp = tf.cast(dstmp[l:], tf.float64)  
             del(dstmp)
             mean = np.mean(dist_2_tmp, axis=0)
             std = np.std(dist_2_tmp, axis=0)
