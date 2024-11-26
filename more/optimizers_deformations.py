@@ -314,7 +314,7 @@ def compute_exclusion_bisection_np(reference_distribution: tfp.distributions.Dis
                                                            dist_2_input = dist_2,
                                                            **test_kwargs)
         
-        Metric = metric_class(TwoSampleTestInputs, **metric_kwargs) # type: ignore
+        Metric = metric_class(TwoSampleTestInputs, **metric_kwargs) # here i create an instance of the class
         Metric.Test_np()
         metric_mean = np.mean(Metric.Results[-1].result_value[metric_result_key] * metric_scale_func(ns, ndims)) # type: ignore
         metric_std = np.std(Metric.Results[-1].result_value[metric_result_key] * metric_scale_func(ns, ndims)) # type: ignore

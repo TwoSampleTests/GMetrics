@@ -27,6 +27,7 @@ from GMetrics.base import TwoSampleTestResults
 
 from typing import Tuple, Union, Optional, Type, Dict, Any, List, Set
 from GMetrics.utils import DTypeType, IntTensor, FloatTensor, BoolTypeTF, BoolTypeNP, IntType, DataTypeTF, DataTypeNP, DataType, DistTypeTF, DistTypeNP, DistType, DataDistTypeNP, DataDistTypeTF, DataDistType, BoolType
+from GMetrics.more.MixtureDistributions import MixMultiNormal, MultiNormalFromMix
 
 import torch
 import time
@@ -50,16 +51,54 @@ def get_logflk_config(M, flk_sigma, lam, weight, iter, seed=None, cpu=False):   
             'loss' : WeightedCrossEntropyLoss(kernel=GaussianKernel(sigma=flk_sigma), neg_weight=weight),
             }
 
-def candidate_sigma(data, perc=90):
-    # this function gives an estimate of the width of the gaussian kernel
-    # use on a (small) sample of reference data (standardize first if necessary)
-    pairw = pdist(data)
-    return round(np.percentile(pairw,perc),1)
+# def candidate_sigma(data, perc=90):
+#     # this function gives an estimate of the width of the gaussian kernel
+#     # use on a (small) sample of reference data (standardize first if necessary)
+#     pairw = pdist(data)
+#     return round(np.percentile(pairw,perc),1)
+
+def candidate_sigma(reference: Union[tfp.distributions.Distribution, NumpyDistribution, tf.Tensor, np.ndarray], perc=90): 
+    if isinstance(reference, (np.ndarray, tf.Tensor)):   
+        ref_sample_for_sigma = reference[:10000]  
+        pairw = pdist(ref_sample_for_sigma)
+        flk_sigma = round(np.percentile(pairw, perc), 1)
+        print(f"Finite Dataset Case.\n"
+              f"The Gaussian kernel sigma is estimated as the 90th percentile of the pairwise distance among 10000 points extracted from the reference data. \n"
+              f"The value of sigma is: {flk_sigma}")
+        return flk_sigma
+    if isinstance(reference, (NumpyDistribution, tfp.distributions.Distribution)):
+        if type(reference) is type(MultiNormalFromMix()):        #this is not strictly correct cause MultiNormalFromMix is costum made and type(MultiNormalFromMix)  
+            ref_sample_for_sigma = reference.sample(10000)     #returns tf implemented functions, not the costum made one. Nonetheless it is a different type from 
+            pairw = pdist(ref_sample_for_sigma)                #MixMultiNormal so i can use this to distinguish the two. In a general case this can be misleading
+            flk_sigma = round(np.percentile(pairw, perc), 1)
+            print(f"Known distribution case. The distribution is the costum made MultiNormalFromMix.\n"
+                  f"The gaussian kernel sigma is estimated as the 90th percentile of the pairwise distance among 10000 points extracted from the reference distribution.\n"
+                  f"The value of sigma is: {flk_sigma}")
+            return flk_sigma
+        if type(reference) is type(MixMultiNormal()):
+            ref_sample_for_sigma = reference.sample(10000)
+            pairw = pdist(ref_sample_for_sigma)
+            flk_sigma = round(np.percentile(pairw, perc), 1)/4
+            print(f"Known distribution case. The distribution is the costum made MixMultiNormal.\n"
+                  f"The gaussian kernel sigma is estimated as the 90th percentile of the pairwise distance among 10000 points extracted from the reference distribution.\n"
+                  f"The value of sigma is: {flk_sigma}")
+            return flk_sigma
+        else:
+            ref_sample_for_sigma = reference.sample(10000)
+            pairw = pdist(ref_sample_for_sigma)
+            flk_sigma = round(np.percentile(pairw, perc), 1)
+            print(f"Known distribution case. The distribution is {type(reference)}.\n"
+                  f"The Gaussian kernel sigma is estimated as the 90th percentile of the pairwise distance among 10000 points extracted from the reference distribution.\n"
+                  f"The value of sigma is: {flk_sigma}")
+            return flk_sigma
+            
+    else:
+        raise NotImplementedError("Reference is not a distribution (numpy or tfd) nor a dataset (numpy or tensorflow)")
 
 def trainer(X, Y, flk_config):
     # trainer for logfalkon model
-    Xtorch=torch.from_numpy(X) #features 
-    Ytorch=torch.from_numpy(Y) #labels
+    Xtorch = torch.from_numpy(X) #features 
+    Ytorch = torch.from_numpy(Y) #labels
     model = LogisticFalkon(**flk_config)
     model.fit(Xtorch, Ytorch)
     return model.predict(Xtorch).numpy()
@@ -124,11 +163,13 @@ class NPLMMetric(TwoSampleTestBase):
         self._Results: TwoSampleTestResults
         
         # New attributes
-        self.nplm_kwargs = nplm_kwargs # Use the setter to validate arguments
+        self.nplm_kwargs = nplm_kwargs # These are the hyperparameters of falkon 
         
         super().__init__(data_input = data_input, 
                          progress_bar = progress_bar,
                          verbose = verbose)
+        
+        self.flk_config()
         
     @property
     def nplm_kwargs(self) -> Dict[str, Any]:
@@ -136,7 +177,7 @@ class NPLMMetric(TwoSampleTestBase):
     
     @nplm_kwargs.setter
     def nplm_kwargs(self, nplm_kwargs: Dict[str, Any]) -> None:
-        valid_keys: Set[str] = {'M', 'lam', 'iter_list', 'weight'}
+        valid_keys: Set[str] = {'M', 'lam', 'iter_list', 'flk_sigma', 'weight'}
 
         for key in nplm_kwargs.keys():
             if key not in valid_keys:
@@ -157,13 +198,6 @@ class NPLMMetric(TwoSampleTestBase):
         else:
             raise ValueError("Missing required key: lam")
         
-        if 'weight' in nplm_kwargs:
-            weight_value = nplm_kwargs['weight']
-            if weight_value <= 0:
-                raise ValueError("weight must be positive")
-        else:
-            raise ValueError("Missing required key: weight")
-        
         if 'iter_list' in nplm_kwargs:
             iterations = nplm_kwargs['iter_list']
             #if iterations <= 0:
@@ -171,13 +205,44 @@ class NPLMMetric(TwoSampleTestBase):
         else:
             raise ValueError("Missing required key: iter_list")
         
+        if 'flk_sigma' in nplm_kwargs:
+            flk_sigma = nplm_kwargs['flk_sigma']
+            if flk_sigma <= 0:
+                raise ValueError("Falkon sigma must be positive")
+        else:
+            raise ValueError("Missing required key: flk:_sigma")
+        
+        if 'weight' in nplm_kwargs:
+            weight_value = nplm_kwargs['weight']
+            if weight_value <= 0:
+                raise ValueError("weight must be positive")
+        else:
+            raise ValueError("Missing required key: weight")
+    
         self._nplm_kwargs = nplm_kwargs
     
         # print(f"The weight (ratio between the number of points in data sample and reference sample) is: {weight_value}\n"
         #       f"The number of Nyström center is: {M_number}\n"
         #       f"The lambda value is: {lam_value}\n"
         #       f"The number of iterations is: {iterations}")
+        
+    def flk_config(self):  
+        self.falkon_config = get_logflk_config(self._nplm_kwargs.get('M'),
+                                        self._nplm_kwargs.get('flk_sigma'),
+                                        self._nplm_kwargs.get('lam'), 
+                                        self._nplm_kwargs.get('weight'), 
+                                        self._nplm_kwargs.get('iter_list'), 
+                                        seed=None, 
+                                        cpu=False) 
+        self.falkon_config['seed'] = 0 # seed for center selection
 
+        # print(f"Falkon is configured with the following hyperparameters:\n"
+        #       f"The weight (ratio between the number of points in data sample and reference sample) is: {self._nplm_kwargs.get('weight')}\n"
+        #       f"The number of Nyström center is: {self._nplm_kwargs.get('M')}\n"
+        #       f"The lambda value is: {self._nplm_kwargs.get('lam')}\n"
+        #       f"The number of iterations is: {self._nplm_kwargs.get('iter_list')}\n"
+        #       f"The width of the gaussian kernel is: {self.flk_sigma}")
+        
     def compute(self) -> None:
         """
         Function that computes the NPLM  metric from two multivariate samples
@@ -195,7 +260,7 @@ class NPLMMetric(TwoSampleTestBase):
             self.Test_np()
         else:
             self.Test_np()
-    
+
     def Test_np(self) -> None:
         """
         """
@@ -234,14 +299,6 @@ class NPLMMetric(TwoSampleTestBase):
             else:
                 raise TypeError("dist must be either a tfp.distributions.Distribution or a NumpyDistribution object.")
             return dist_num
-
-        ref_sample_for_sigma = dist_1_symb.sample(10000) #set_dist_num_from_symb(dist = dist_1_symb, nsamples = 10000, dtype = dtype)  
-        flk_sigma = candidate_sigma(ref_sample_for_sigma, perc=90)
-        # print(f"The gaussian kernel sigma is estimated as the 90th percentile of the pairwise distance among 10000 points extracted from the reference distribution.\n"
-        #       f"Its value is: {flk_sigma}")
-
-        flk_config = get_logflk_config(self._nplm_kwargs.get('M'), flk_sigma, self._nplm_kwargs.get('lam'), self._nplm_kwargs.get('weight'), self._nplm_kwargs.get('iter_list'), seed=None, cpu=False) #where do I get M, lam, weight?
-        flk_config['seed'] = 0 # seed for center selection
 
         def start_calculation() -> None:
             conditional_print(self.verbose, "\n------------------------------------------")
@@ -297,7 +354,7 @@ class NPLMMetric(TwoSampleTestBase):
             # print(f"The shape of X is: {X_k.shape}\n"
             #       f"The shape of Y is: {Y_k.shape}")
 
-            preds_k = trainer(X_k, Y_k, flk_config)
+            preds_k = trainer(X_k, Y_k, self.falkon_config)
 
             metric: float
             #metric_means: float
