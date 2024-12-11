@@ -78,11 +78,40 @@ def candidate_sigma(reference: Union[tfp.distributions.Distribution, NumpyDistri
         if type(reference) is type(MixMultiNormal()):
             ref_sample_for_sigma = reference.sample(10000)
             pairw = pdist(ref_sample_for_sigma)
-            flk_sigma = round(np.percentile(pairw, perc), 1)/4
-            print(f"Known distribution case. The distribution is the costum made MixMultiNormal.\n"
-                  f"The gaussian kernel sigma is estimated as the 90th percentile of the pairwise distance among 10000 points extracted from the reference distribution.\n"
-                  f"The value of sigma is: {flk_sigma}")
-            return flk_sigma
+            print(f"Known distribution case. The distribution is the costum made MixMultiNormal.\n")
+            if reference.event_shape.num_elements() >= 1 and reference.event_shape.num_elements() <= 19:
+                denominator = 2.5
+                flk_sigma = round(np.percentile(pairw, perc), 1)/denominator
+                print(f"The gaussian kernel sigma is estimated as 1/{denominator} of the 90th percentile of the pairwise distance among 10000 points extracted from the reference distribution.\n"
+                      f"The value of sigma is: {flk_sigma}\n"
+                      f"The {denominator} value has been chosen looking at the pairwise distribution in 5D.\n"
+                      f"If you want you can change its value in metrics.NPLM.")
+                return flk_sigma
+            elif reference.event_shape.num_elements() >= 20 and reference.event_shape.num_elements() <= 75:
+                denominator = 3.5
+                flk_sigma = round(np.percentile(pairw, perc), 1)/denominator
+                print(f"The gaussian kernel sigma is estimated as 1/{denominator} of the 90th percentile of the pairwise distance among 10000 points extracted from the reference distribution.\n"
+                      f"The value of sigma is: {flk_sigma}\n"
+                      f"The {denominator} value has been chosen looking at the pairwise distribution in 20D.\n"
+                      f"If you want you can change its value in metrics.NPLM.")
+                flk_sigma = round(np.percentile(pairw, perc), 1)/3.5
+                return flk_sigma
+            elif reference.event_shape.num_elements() >= 75 and reference.event_shape.num_elements() <= 200:
+                denominator = 4.5
+                flk_sigma = round(np.percentile(pairw, perc), 1)/4.5
+                print(f"The gaussian kernel sigma is estimated as 1/{denominator} of the 90th percentile of the pairwise distance among 10000 points extracted from the reference distribution.\n"
+                      f"The value of sigma is: {flk_sigma}\n"
+                      f"The {denominator} value has been chosen looking at the pairwise distribution in 100D.\n"
+                      f"If you want you can change its value in metrics.NPLM.")
+                return flk_sigma
+            else:
+                denominator = 5.5
+                flk_sigma = round(np.percentile(pairw, perc), 1)/denominator
+                print(f"The gaussian kernel sigma is estimated as 1/{denominator} of the 90th percentile of the pairwise distance among 10000 points extracted from the reference distribution.\n"
+                      f"The value of sigma is: {flk_sigma}\n"
+                      f"The {denominator} value has been extrapolated after having looked at the pairwise distribution in 5, 20, 100 dimensions.\n"
+                      f"If you want you can change its value in metrics.NPLM.")
+                return flk_sigma
         else:
             ref_sample_for_sigma = reference.sample(10000)
             pairw = pdist(ref_sample_for_sigma)
@@ -364,7 +393,7 @@ class NPLMMetric(TwoSampleTestBase):
             metric_list.append(metric)
             #metric_means.append(np.mean(list1)) # type: ignore
             #metric_stds.append(np.std(list1)) # type: ignore
-
+            self.test_statistics_values = metric_list      # I created this to be used when testing flk parameters. NOT NECESSARY for the usual test. 
             update_progress_bar()
         
         close_progress_bar()
