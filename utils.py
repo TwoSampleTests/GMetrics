@@ -717,7 +717,7 @@ def HPD_intervals(data, intervals=0.68, weights=None, nbins=25, print_hist=False
     return results
 
 def HPD_quotas(data, intervals=0.68, weights=None, nbins=25, from_top=True):
-    hist2D = np.histogram2d(data[:,0], data[:,1], bins=nbins, range=None, normed=None, weights=weights, density=None)
+    hist2D = np.histogram2d(data[:,0], data[:,1], bins=nbins, range=None, weights=weights, density=None)
     intervals = np.array([intervals]).flatten()
     counts, binsX, binsY = hist2D
     integral = counts.sum()
