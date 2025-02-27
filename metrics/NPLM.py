@@ -29,13 +29,19 @@ from typing import Tuple, Union, Optional, Type, Dict, Any, List, Set
 from GMetrics.utils import DTypeType, IntTensor, FloatTensor, BoolTypeTF, BoolTypeNP, IntType, DataTypeTF, DataTypeNP, DataType, DistTypeTF, DistTypeNP, DistType, DataDistTypeNP, DataDistTypeTF, DataDistType, BoolType
 from GMetrics.more.MixtureDistributions import MixMultiNormal, MultiNormalFromMix
 
-import torch
+try:
+    import torch
+except ImportError:
+    print("PyTorch not installed. Please install PyTorch to use the NPLM metric.")
 import time
 
-from falkon import LogisticFalkon
-from falkon.kernels import GaussianKernel
-from falkon.options import FalkonOptions
-from falkon.gsc_losses import WeightedCrossEntropyLoss
+try:
+    from falkon import LogisticFalkon
+    from falkon.kernels import GaussianKernel
+    from falkon.options import FalkonOptions
+    from falkon.gsc_losses import WeightedCrossEntropyLoss
+except ImportError:
+    print("Falkon not installed. Please install Falkon to use the NPLM metric.")
 
 from scipy.spatial.distance import pdist
 
