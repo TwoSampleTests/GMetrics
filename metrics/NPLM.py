@@ -413,8 +413,10 @@ class NPLMMetric(TwoSampleTestBase):
         result: TwoSampleTestResult = TwoSampleTestResult(timestamp, test_name, parameters, result_value)
         self.Results.append(result)
 
-    def Test_tf(self, max_vectorize: int = 100) -> None:    
-        raise NotImplementedError("You cannot use Tensorflow with Falkon. Please swap to Test.np().")
+    def Test_tf(self, max_vectorize: int = 100) -> None:
+        print("Warning: TensorFlow cannot be used with Falkon. Switching automatically to Test_np")
+        return self.Test_np()
+
     
     # def Test_tf(self, max_vectorize: int = 100) -> None:
     #     """
