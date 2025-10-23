@@ -307,7 +307,10 @@ class NPLMMetric(TwoSampleTestBase):
         if isinstance(self.Inputs.dist_2_num, np.ndarray):
             dist_2_num: DataTypeNP = self.Inputs.dist_2_num
         else:
-            dist_2_num = self.Inputs.dist_2_num.numpy()
+            dist_2_num = self.Inputs.dist_2_num.numpy()    
+        target_dtype = np.float64                    #added to ensure both dataset are of the same type
+        dist_1_num = dist_1_num.astype(target_dtype) #added to ensure both dataset are of the same type
+        dist_2_num = dist_2_num.astype(target_dtype) #added to ensure both dataset are of the same type
         dist_1_symb: DistType = self.Inputs.dist_1_symb
         dist_2_symb: DistType = self.Inputs.dist_2_symb
         ndims: int = self.Inputs.ndims
